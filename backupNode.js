@@ -111,6 +111,16 @@ snapList.on('exit', function(code) {
                                                     tooOld: age > maxAge ? true : false,
                                                 };
                                             });
+                                            vmJson.tooOld = true;
+                                            _.each(vmJson.snapshots, function(s) {
+                                                if (s.tooOld == false)
+                                                    vmJson.tooOld = false;
+                                            });
+vmJson.destination = {
+	pool: POOL,
+	fs: POOL+'/Backups/'+NODE+'/'+vmJson.veid,
+};
+
                                             console.log(pj.render(vmJson));
                                             spinner.succeed('  Finished working on VM ' + vmJson.veid + '.');
                                             _cb(null, vmJson);
