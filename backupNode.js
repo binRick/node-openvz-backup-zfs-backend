@@ -19,6 +19,7 @@ var spawn = require('child_process').spawn,
 var NODE = process.argv[2],
     VEID = process.argv[3] || '',
     POOL = config.POOL,
+    debugVM = true,
     maxAge = config.maxAge,
     backupNodes = config.backupNodes,
     sshPort = config.sshPort,
@@ -34,7 +35,39 @@ var NODE = process.argv[2],
     },
     snapshots = '';
 
+var backupVM = function(vmJson, _cb) {
+	var rsa =  ['--ignore-missing-args','--rsync-path=/usr/local/rsync/bin/rsync','--numeric-ids','--info=stats2','--delete','-are','"ssh -p '+sshPort+'"',NODE+':'+vmJson.private+'/',vmJson.destination.dir+'/'];
+console.log(rsa);
+	//var rsyncSpawn = spawn('/usr/local/rsync/bin/rsync',rsa);
+    _cb();
 
+};
+var ensureDestination = function(vmJson, _cb) {
+    var checkFsSpawn = spawn('zfs', ['list', vmJson.destination.fs]);
+    checkFsSpawn.on('exit', function(code) {
+        if (code != 0) {
+            var createFsSpawn = spawn('zfs', ['create', vmJson.destination.fs]);
+            createFsSpawn.on('exit', function(code) {
+                if (code != 0)
+                    throw 'Failed to create ' + vmJson.fs;
+                else
+                    return _cb();
+            }).stdout.on('data', function(dat) {
+
+            });
+            createFsSpawn.stderr.on('data', function(dat) {
+
+            });
+        } else {
+            return _cb();
+        }
+    }).on('data', function(dat) {
+
+    });
+    checkFsSpawn.stderr.on('data', function(dat) {
+
+    });
+};
 var spinner = ora('Querying local snapshots...').start();
 var snapList = spawn('zfs', ['list', '-tsnapshot', '-pHoname']);
 snapList.on('exit', function(code) {
@@ -116,14 +149,19 @@ snapList.on('exit', function(code) {
                                                 if (s.tooOld == false)
                                                     vmJson.tooOld = false;
                                             });
-vmJson.destination = {
-	pool: POOL,
-	fs: POOL+'/Backups/'+NODE+'/'+vmJson.veid,
-};
-
-                                            console.log(pj.render(vmJson));
-                                            spinner.succeed('  Finished working on VM ' + vmJson.veid + '.');
-                                            _cb(null, vmJson);
+                                            vmJson.destination = {
+                                                pool: POOL,
+                                                fs: POOL + '/Backups/' + NODE + '/' + vmJson.veid,
+                                            };
+                                            vmJson.destination.dir = '/' + vmJson.destination.fs;
+                                            ensureDestination(vmJson, function() {
+                                                if (debugVM)
+                                                    console.log(pj.render(vmJson));
+                                                backupVM(vmJson, function() {
+                                                    spinner.succeed('  Finished working on VM ' + vmJson.veid + '.');
+                                                    _cb(null, vmJson);
+                                                });
+                                            });
                                         }).on('data', function(data) {
                                             privateFilesystemType += data.toString();
                                         });
