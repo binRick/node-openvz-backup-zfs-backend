@@ -36,10 +36,14 @@ var NODE = process.argv[2],
     snapshots = '';
 
 var backupVM = function(vmJson, _cb) {
-	var rsa =  ['--ignore-missing-args','--rsync-path=/usr/local/rsync/bin/rsync','--numeric-ids','--info=stats2','--delete','-are','"ssh -p '+sshPort+'"',NODE+':'+vmJson.private+'/',vmJson.destination.dir+'/'];
-console.log(rsa);
-	//var rsyncSpawn = spawn('/usr/local/rsync/bin/rsync',rsa);
-    _cb();
+    var rsa = ['--ignore-missing-args', '--rsync-path=/usr/local/rsync/bin/rsync', '--numeric-ids', '--info=stats2', '--delete', '-are', '"ssh -p ' + sshPort + '"', NODE + ':' + vmJson.private + '/', vmJson.destination.dir + '/'];
+    console.log(rsa);
+    var rsyncSpinner = ora('Running Rsync...').start();
+    setTimeout(function() {
+        rsyncSpinner.succeed('Rsync OK');
+        //var rsyncSpawn = spawn('/usr/local/rsync/bin/rsync',rsa);
+        _cb();
+    }, 5000);
 
 };
 var ensureDestination = function(vmJson, _cb) {
