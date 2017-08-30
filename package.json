@@ -23,6 +23,7 @@
     "condense-whitespace": "^1.0.0",
     "moment": "^2.18.1",
     "ora": "^1.3.0",
+    "parse-spawn-args": "^1.0.2",
     "pretty-bytes": "^4.0.2",
     "pretty-ms": "^3.0.0",
     "prettyjson": "^1.2.1",

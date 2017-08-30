@@ -10,6 +10,7 @@ var spawn = require('child_process').spawn,
     clear = require('cli-clear'),
     Client = require('ssh2').Client,
     fs = require('fs'),
+    parse = require('parse-spawn-args').parse,
     c = require('chalk'),
     async = require('async'),
     _ = require('underscore'),
@@ -37,13 +38,25 @@ var NODE = process.argv[2],
 
 var backupVM = function(vmJson, _cb) {
     var rsa = ['--ignore-missing-args', '--rsync-path=/usr/local/rsync/bin/rsync', '--numeric-ids', '--info=stats2', '--delete', '-are', '"ssh -p ' + sshPort + '"', NODE + ':' + vmJson.private + '/', vmJson.destination.dir + '/'];
-    console.log(rsa);
+    rsa = parse(rsa.join(' '));
     var rsyncSpinner = ora('Running Rsync...').start();
-    setTimeout(function() {
-        rsyncSpinner.succeed('Rsync OK');
-        //var rsyncSpawn = spawn('/usr/local/rsync/bin/rsync',rsa);
+    var out = '';
+    var rsyncSpawn = spawn('/usr/local/rsync/bin/rsync', rsa);
+    rsyncSpawn.on('exit', function(code) {
+        if (code != 0) {
+            rsyncSpinner.fail('Rsync exited with code: ' + code);
+            console.log('/usr/local/rsync/bin/rsync ' + rsa.join(' '));
+            process.exit(-1);
+        }
+        rsyncSpinner.succeed('Rsync completed.');
         _cb();
-    }, 5000);
+    });
+
+    rsyncSpawn.stdout.on('data', function(data) {
+        out += data.toString();
+    });
+    rsyncSpawn.stderr.on('data', function(data) {});
+    setTimeout(function() {}, 5000);
 
 };
 var ensureDestination = function(vmJson, _cb) {
